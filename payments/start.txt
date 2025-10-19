@@ -1,0 +1,1 @@
+go run payments/cmd/migrator/main.go --storage-path=./payments/storage/payments.db --migrations-path=./payments/migrations

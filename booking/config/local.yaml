@@ -1,0 +1,10 @@
+env: "local" 
+storage_path: "./storage/booking.db"
+grpc: 
+  addr: "0.0.0.0:45055"
+  timeout: 5s
+clients: 
+  payments:
+   address: "sport-box-payments:55055"
+   timeout: 5s
+   retriesCount: 3

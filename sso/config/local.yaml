@@ -1,0 +1,7 @@
+env: "local"
+storage_path: "./storage/sso.db"
+token_ttl: 20m
+app_secret: "IloveDasha1205"
+grpc:
+  addr: "0.0.0.0:44044"
+  timeout: 5s

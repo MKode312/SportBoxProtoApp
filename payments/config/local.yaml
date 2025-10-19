@@ -1,0 +1,5 @@
+env: "local"
+storage_path: "./storage/payments.db"
+grpc:
+   addr: "0.0.0.0:55055"
+   timeout: 5s

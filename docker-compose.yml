@@ -1,0 +1,46 @@
+services:
+  sport-box-api:
+    container_name: sport-box-api
+    build:
+      context: .
+      dockerfile: Dockerfile.API
+    environment:
+      - CONFIG_PATH=./config/local.yaml
+    volumes:
+      - ./sport-box-api/config:/app/config:ro
+    networks:
+      - sport-box_net
+    ports:
+      - 8082:8082
+  sport-box-sso:
+    container_name: sport-box-sso
+    command: ["/app/sso"]
+    build:
+      context: .
+      dockerfile: Dockerfile.SSO
+    environment:
+      - CONFIG_PATH=./config/local.yaml
+    volumes:
+      - ./sso/config:/app/config:ro
+      - ./sso/storage/:/app/storage/
+    networks:
+      - sport-box_net
+    ports:
+      - 44044:44044
+  sport-box-payments:
+    container_name: sport-box-payments 
+    command: ["/app/payments"]
+    build:
+      context: .
+      dockerfile: Dockerfile.Payments 
+    environment:
+      - CONFIG_PATH=./config/local.yaml 
+    volumes:
+      - ./payments/config:/app/config:ro 
+      - ./payments/storage/:/app/storage/ 
+    networks:
+      - sport-box_net
+    ports:
+      - 55055:55055
+networks:
+  sport-box_net:
