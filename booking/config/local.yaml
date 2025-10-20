@@ -1,5 +1,6 @@
 env: "local" 
 storage_path: "./storage/booking.db"
+tCheckerSeconds: 400
 grpc: 
   addr: "0.0.0.0:45055"
   timeout: 5s

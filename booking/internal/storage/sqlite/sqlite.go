@@ -29,11 +29,6 @@ func New(storagePath string) (*Storage, error) {
 func (s *Storage) BookABox(ctx context.Context, email string, boxName string, startTime string, timeHrs int64, timeMins int64) (resID int64, success bool, err error) {
 	const op = "storage.sqlite.BookABox"
 
-	stmt, err := s.db.Prepare("INSERT INTO bookings(email, boxName, startsAt, expiresAt) VALUES(?, ?, ?, ?)")
-	if err != nil {
-		return 0, false, fmt.Errorf("%s: %w", op, err)
-	}
-
 	dur := time.Duration(timeHrs)*time.Hour + time.Duration(timeMins)*time.Minute
 
 	startsAt, err := time.Parse(time.UnixDate, startTime)
@@ -43,17 +38,39 @@ func (s *Storage) BookABox(ctx context.Context, email string, boxName string, st
 
 	timeEnd := startsAt.Add(dur).Local().Unix()
 
-	res, err := stmt.ExecContext(ctx, email, boxName, startTime, timeEnd)
+	isNotBooked, err := s.IsNotBooked(ctx, boxName, startsAt.Unix(), timeEnd)
 	if err != nil {
 		return 0, false, fmt.Errorf("%s: %w", op, err)
 	}
 
-	id, err := res.LastInsertId()
-	if err != nil {
+	fmt.Println("isNotBooked:", isNotBooked)
+
+	if isNotBooked {
+		fmt.Println("Попытка вставить запись")
+		stmt, err := s.db.Prepare("INSERT INTO bookings(email, boxName, startsAt, expiresAt) VALUES(?, ?, ?, ?)")
+		if err != nil {
+			fmt.Println("Ошибка подготовки запроса:", err)
+			return 0, false, fmt.Errorf("%s: %w", op, err)
+		}
+
+		res, err := stmt.ExecContext(ctx, email, boxName, startsAt.Unix(), timeEnd)
+		if err != nil {
+			fmt.Println("Ошибка выполнения вставки:", err)
+			return 0, false, fmt.Errorf("%s: %w", op, err)
+		} else {
+			fmt.Println("Вставка выполнена успешно")
+		}
+
+		id, err := res.LastInsertId()
+		if err != nil {
+			fmt.Println("Ошибка получения last insert id:", err)
+			return 0, false, fmt.Errorf("%s: %w", op, err)
+		}
+		fmt.Printf("Последний вставленный ID: %d\n", id)
+		return 1000 * id, true, nil
+	} else {
 		return 0, false, fmt.Errorf("%s: %w", op, err)
 	}
-
-	return id, true, nil
 }
 
 func (s *Storage) TimeCheck(ctx context.Context, timeNow int64) (bool, error) {
@@ -61,22 +78,46 @@ func (s *Storage) TimeCheck(ctx context.Context, timeNow int64) (bool, error) {
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("%s: %w", op, err)
 	}
 
 	_, err = tx.ExecContext(ctx, `
         DELETE FROM bookings WHERE expiresAt < ?
     `, timeNow)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("%s: %w", op, err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		tx.Rollback()
 		return false, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return true, nil
+}
+
+func (s *Storage) StartDbChecker(ctx context.Context, interval int64) <-chan error {
+	errCh := make(chan error, 1)
+
+	go func() {
+		defer close(errCh)
+		ticker := time.NewTicker(time.Second * time.Duration(interval))
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				now := time.Now().Unix()
+				if _, err := s.TimeCheck(ctx, now); err != nil {
+					errCh <- err
+					return
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	return errCh
 }
 
 func (s *Storage) IsNotBooked(ctx context.Context, boxName string, startTime int64, expirationTime int64) (bool, error) {
@@ -88,26 +129,25 @@ func (s *Storage) IsNotBooked(ctx context.Context, boxName string, startTime int
 	}
 
 	row := tx.QueryRowContext(ctx, `
-        SELECT COUNT(*) FROM bookings WHERE boxName = ? AND (startsAt < ? AND expiresAt > ?) 
+        SELECT COUNT(*) FROM bookings WHERE boxName = ? AND (startsAt <= ? AND expiresAt >= ?) 
     `, boxName, expirationTime, startTime)
 	var count int
+	fmt.Printf("Проверка брони для boxName=%s, startTime=%d, expirationTime=%d\n", boxName, startTime, expirationTime)
 	if err := row.Scan(&count); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			tx.Rollback()
 			return false, fmt.Errorf("%s: %w", op, storage.ErrBookingNotFound)
 		}
 		return false, fmt.Errorf("%s: %w", op, err)
 	}
+		fmt.Printf("Результат COUNT=%d\n", count)
 	if count > 0 {
 		if err := tx.Commit(); err != nil {
-			tx.Rollback()
 			return false, fmt.Errorf("%s: %w", op, err)
 		}
-		return true, fmt.Errorf("%s: %w", op, storage.ErrBookingIntervalsCrossed)
+		return false, fmt.Errorf("%s: %w", op, storage.ErrAlreadyBooked)
 	}
 
 	if err := tx.Commit(); err != nil {
-		tx.Rollback()
 		return false, fmt.Errorf("%s: %w", op, err)
 	}
 

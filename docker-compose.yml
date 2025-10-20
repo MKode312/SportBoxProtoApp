@@ -17,7 +17,7 @@ services:
     command: ["/app/sso"]
     build:
       context: .
-      dockerfile: Dockerfile.SSO
+      dockerfile: Dockerfile.Sso
     environment:
       - CONFIG_PATH=./config/local.yaml
     volumes:
@@ -41,6 +41,22 @@ services:
     networks:
       - sport-box_net
     ports:
-      - 55055:55055
+      - 45045:45045
+    
+  sport-box-booking:
+      container_name: sport-box-booking
+      command: ["/app/booking"]
+      build:
+        context: .
+        dockerfile: Dockerfile.Booking 
+      environment:
+        - CONFIG_PATH=./config/local.yaml 
+      volumes:
+        - ./booking/config:/app/config:ro
+        - ./booking/storage/:/app/storage/
+      networks:
+        - sport-box_net 
+      ports:
+        - 45055:45055
 networks:
   sport-box_net:

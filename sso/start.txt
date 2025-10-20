@@ -1,1 +1,1 @@
-go run sso/cmd/migrator/main.go --storage-path=./sso/storage/sso.db --migrations-path=./sso/migrations
+go run cmd/migrator/main.go --storage-path=./storage/sso.db --migrations-path=./migrations

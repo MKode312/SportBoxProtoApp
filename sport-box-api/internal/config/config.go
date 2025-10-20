@@ -9,8 +9,8 @@ import (
 )
 
 type Config struct {
-	Env        string        `yaml:"env" env-required:"true"`
-	AppSecret  string        `yaml:"AppSecret" env-required:"true" env:"APP_SECRET"`
+	Env        string `yaml:"env" env-required:"true"`
+	AppSecret  string `yaml:"AppSecret" env-required:"true" env:"APP_SECRET"`
 	HTTPServer `yaml:"http_server"`
 	Clients    ClientsConfig `yaml:"clients"`
 }
@@ -30,6 +30,7 @@ type Client struct {
 type ClientsConfig struct {
 	SSO      Client `yaml:"sso"`
 	Payments Client `yaml:"payments"`
+	Booking  Client `yaml:"booking"`
 }
 
 func MustLoad() *Config {

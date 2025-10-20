@@ -5,11 +5,13 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	bookgrpc "sport-box-api/internal/clients/booking/grpc"
 	paymgrpc "sport-box-api/internal/clients/payments/grpc"
 	ssogrpc "sport-box-api/internal/clients/sso/grpc"
 	"sport-box-api/internal/config"
 	"sport-box-api/internal/http-server/handlers/auth/login"
 	"sport-box-api/internal/http-server/handlers/auth/register"
+	"sport-box-api/internal/http-server/handlers/book"
 	"sport-box-api/internal/http-server/handlers/paym/addcard"
 	"sport-box-api/internal/http-server/handlers/paym/addfunds"
 	authMW "sport-box-api/internal/http-server/middleware/auth"
@@ -59,7 +61,19 @@ func main() {
 		cfg.Clients.Payments.RetriesCount,
 	)
 	if err != nil {
-		log.Error("failed toinit payments client", sl.Err(err))
+		log.Error("failed to init payments client", sl.Err(err))
+		os.Exit(1)
+	}
+
+	bookingClient, err := bookgrpc.New(
+		context.Background(),
+		log,
+		cfg.Clients.Booking.Addr,
+		cfg.Clients.Booking.Timeout,
+		cfg.Clients.Booking.RetriesCount,
+	)
+	if err != nil {
+		log.Error("failed to init booking client", sl.Err(err))
 		os.Exit(1)
 	}
 
@@ -77,6 +91,7 @@ func main() {
 		r.Use(authMW.AuthorizeJWTToken)
 		r.Post("/addcard", addcard.New(context.Background(), log, *paymentsClient))
 		r.Post("/addfunds", addfunds.New(context.Background(), log, *paymentsClient))
+		r.Post("/book", book.New(context.Background(), log, *bookingClient))
 	})
 
 	srv := &http.Server{

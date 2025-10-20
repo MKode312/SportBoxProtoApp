@@ -1,4 +1,4 @@
-package paymgrpc
+package bookgrpc
 
 import (
 	"context"
@@ -6,14 +6,13 @@ import (
 	"log/slog"
 	"time"
 
+	bookingv1 "github.com/MKode312/protos/gen/go/booking"
 	grpclog "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
-
-	paymentsv1 "github.com/MKode312/protos/gen/go/payments"
 )
 
 const (
@@ -21,12 +20,12 @@ const (
 )
 
 type Client struct {
-	api paymentsv1.PaymentClient
+	api bookingv1.BookClient
 	log *slog.Logger
 }
 
 func New(ctx context.Context, log *slog.Logger, addr string, timeout time.Duration, retriesCount int) (*Client, error) {
-	const op = "paymgrpc.New"
+	const op = "bookgrpc.New"
 
 	retryOpts := []grpcretry.CallOption{
 		grpcretry.WithCodes(codes.NotFound, codes.Aborted, codes.DeadlineExceeded),
@@ -48,56 +47,45 @@ func New(ctx context.Context, log *slog.Logger, addr string, timeout time.Durati
 	}
 
 	return &Client{
-		api: paymentsv1.NewPaymentClient(cc),
+		api: bookingv1.NewBookClient(cc),
 		log: log,
 	}, nil
 }
 
-func (c *Client) AddCard(ctx context.Context, email string, cardNumber string, cvc string, phoneNumber string) (success bool, err error) {
-	const op = "paymgrpc.AddCard"
+func (c *Client) Book(ctx context.Context, email string, boxName string, peopleAmount int64, timeStart string, timeHrs int64, timeMins int64) (balance int64, resID int64, success bool, err error) {
+	const op = "bookgrpc.Book"
 
-	resp, err := c.api.AddCard(ctx, &paymentsv1.AddCardRequest{
-		Email:       email,
-		PhoneNumber: phoneNumber,
-		CardNumber:  cardNumber,
-		Cvc:         cvc,
+	resp, err := c.api.Book(ctx, &bookingv1.BookRequest{
+		Email:        email,
+		BoxName:      boxName,
+		PeopleAmount: peopleAmount,
+		TimeStart:    timeStart,
+		TimeHrs:      timeHrs,
+		TimeMins:     timeMins,
 	})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if ok {
-			if st.Code() == codes.AlreadyExists {
-				return false, fmt.Errorf("%s", st.Message())
-			}
-			if st.Code() == codes.Canceled {
-				return false, fmt.Errorf("%s", st.Message())
-			}
-		}
-		return false, fmt.Errorf("%s: %w", op, err)
-	}
-	return resp.Success, nil
-}
-
-func (c *Client) AddFunds(ctx context.Context, email string, amount int64) (balance int64, success bool, err error) {
-	const op = "paymgrpc.AddFunds"
-
-	resp, err := c.api.AddFunds(ctx, &paymentsv1.AddFundsRequest{
-		Email:  email,
-		Amount: amount,
-	})
-	if err != nil {
-		st, ok := status.FromError(err)
-		if ok {
-			if st.Code() == codes.NotFound {
-				return emptyBalanceValue, false, fmt.Errorf("%s", st.Message())
-			}
-			if st.Code() == codes.Canceled {
-				return emptyBalanceValue, false, fmt.Errorf("%s", st.Message())
+			switch st.Code() {
+			case codes.Canceled:
+				return emptyBalanceValue,  0, false, fmt.Errorf("%s", st.Message())
+			case codes.AlreadyExists:
+				return emptyBalanceValue, 0, false, fmt.Errorf("%s", st.Message())
+			case codes.NotFound:
+				return emptyBalanceValue, 0, false, fmt.Errorf("%s", st.Message())
+			case codes.InvalidArgument:
+				return emptyBalanceValue,  0, false, fmt.Errorf("%s", st.Message())
+			case codes.OutOfRange:
+				return emptyBalanceValue, 0, false, fmt.Errorf("%s", st.Message())
+			case codes.Internal:
+				return emptyBalanceValue, 0, false, fmt.Errorf("%s", st.Message())
 			}
 		}
-		return emptyBalanceValue, false, fmt.Errorf("%s: %w", op, err)
+
+		return emptyBalanceValue, 0, false, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return resp.Balance, resp.Success, nil
+	return resp.Balance, resp.ReserveId, resp.Success, nil
 }
 
 func InterceptorLogger(l *slog.Logger) grpclog.Logger {

@@ -26,13 +26,16 @@ func main() {
 
 	log.Info("app running")
 
-	paymentsClient, err := payments.New(context.Background(), log, cfg.Clients.Payments.Address, cfg.Clients.Payments.Timeout, cfg.Clients.Payments.RetriesCount)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	paymentsClient, err := payments.New(ctx, log, cfg.Clients.Payments.Address, cfg.Clients.Payments.Timeout, cfg.Clients.Payments.RetriesCount)
 	if err != nil {
 		log.Error("failed to start payments client", sl.Err(err))
 		os.Exit(1)
 	}
 
-	application := app.New(log, *paymentsClient, cfg.GRPC.Addr, cfg.StoragePath)
+	application := app.New(ctx, log, *paymentsClient, cfg.Interval, cfg.GRPC.Addr, cfg.StoragePath)
 
 	go application.GRPCSrv.MustRun()
 

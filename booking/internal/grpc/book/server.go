@@ -17,7 +17,9 @@ import (
 var (
 	ErrInvalidCredentials  = errors.New("invalid credentials")
 	ErrNotEnoughFundsToPay = errors.New("not enough funds to pay")
-	ErrNotFound            = errors.New("card not found")
+	ErrCardNotFound        = errors.New("card not found")
+	ErrAlreadyBooked       = errors.New("this box is already booked")
+	ErrBookingNotFound     = errors.New("booking not found")
 )
 
 const (
@@ -35,19 +37,18 @@ type serverAPI struct {
 
 type bookingServerAdapter struct {
 	bookingv1.UnimplementedBookServer
-    originalServer *serverAPI
-    paymentsClient payments.Client
+	originalServer *serverAPI
+	paymentsClient payments.Client
 }
 
-
 func Register(gRPC *grpc.Server, book Book, paymclient payments.Client) {
-    realSrv := &serverAPI{book: book}
-    wrapped := &bookingServerAdapter{
+	realSrv := &serverAPI{book: book}
+	wrapped := &bookingServerAdapter{
 
-        originalServer: realSrv,
-        paymentsClient: paymclient,
-    }
-    bookingv1.RegisterBookServer(gRPC, wrapped)
+		originalServer: realSrv,
+		paymentsClient: paymclient,
+	}
+	bookingv1.RegisterBookServer(gRPC, wrapped)
 }
 
 func (b *bookingServerAdapter) Book(ctx context.Context, req *bookingv1.BookRequest) (*bookingv1.BookResponse, error) {
@@ -65,7 +66,7 @@ func (b *bookingServerAdapter) Book(ctx context.Context, req *bookingv1.BookRequ
 			return nil, status.Error(codes.OutOfRange, "not enough funds to pay for the booking")
 		}
 
-		if err.Error() == ErrNotFound.Error() {
+		if err.Error() == ErrCardNotFound.Error() {
 			return nil, status.Error(codes.NotFound, "card not found")
 		}
 
@@ -77,6 +78,13 @@ func (b *bookingServerAdapter) Book(ctx context.Context, req *bookingv1.BookRequ
 	if paysuccess {
 		reserveID, success, err := b.originalServer.book.Book(ctx, req.GetEmail(), req.GetBoxName(), req.GetTimeStart(), req.GetTimeHrs(), req.GetTimeMins())
 		if err != nil {
+			if err.Error() == ErrAlreadyBooked.Error() {
+				return nil, status.Error(codes.AlreadyExists, "this box is already booked for this time")
+			}
+
+			if err.Error() == ErrBookingNotFound.Error() {
+				return nil, status.Error(codes.NotFound, "booking not found")
+			}
 			return nil, status.Error(codes.Canceled, "booking cancelled")
 		}
 
@@ -105,8 +113,8 @@ func compilePayment(ctx context.Context, req *bookingv1.BookRequest, paymentsCli
 			return emptyBalanceValue, false, fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 		}
 
-		if err.Error() == ErrNotFound.Error() {
-			return emptyBalanceValue, false, fmt.Errorf("%s: %w", op, ErrNotFound)
+		if err.Error() == ErrCardNotFound.Error() {
+			return emptyBalanceValue, false, fmt.Errorf("%s: %w", op, ErrCardNotFound)
 		}
 
 		return emptyBalanceValue, false, fmt.Errorf("%s: %w", op, err)
