@@ -88,6 +88,32 @@ func (c *Client) Book(ctx context.Context, email string, boxName string, peopleA
 	return resp.Balance, resp.ReserveId, resp.Success, nil
 }
 
+func (c *Client) CancelBooking(ctx context.Context, email string, bookingID int64) (refundedAmount int64, balance int64, success bool, err error) {
+	const op = "bookgrpc.CancelBooking"
+
+	resp, err := c.api.(ctx, &bookingv1.CancelBookingRequest{
+		Email:     email,
+		BookingId: bookingID,
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if ok {
+			switch st.Code() {
+			case codes.NotFound:
+				return 0, emptyBalanceValue, false, fmt.Errorf("%s", st.Message())
+			case codes.PermissionDenied:
+				return 0, emptyBalanceValue, false, fmt.Errorf("%s", st.Message())
+			case codes.Internal:
+				return 0, emptyBalanceValue, false, fmt.Errorf("%s", st.Message())
+			}
+		}
+
+		return 0, emptyBalanceValue, false, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return resp.RefundedAmount, resp.Balance, resp.Success, nil
+}
+
 func InterceptorLogger(l *slog.Logger) grpclog.Logger {
 	return grpclog.LoggerFunc(func(ctx context.Context, lvl grpclog.Level, msg string, fields ...any) {
 		l.Log(ctx, slog.Level(lvl), msg, fields...)

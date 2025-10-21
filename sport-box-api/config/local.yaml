@@ -10,7 +10,7 @@ clients:
    timeout: 5s
    retriesCount: 3
   payments:
-   addr: "sport-box-payments:55055"
+   addr: "sport-box-payments:45045"
    timeout: 5s
    retriesCount: 3
   booking:

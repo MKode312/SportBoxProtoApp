@@ -87,6 +87,28 @@ func (s *Storage) AddFunds(ctx context.Context, email string, amount int64) (int
 	return balance, true, nil
 }
 
+func (s *Storage) GetCard(ctx context.Context, email string) (string, string, error) {
+	const op = "storage.sqlite.GetCard"
+
+	stmt, err := s.db.Prepare("SELECT card_numberHash, phone_numberHash FROM cards WHERE email = ?")
+	if err != nil {
+		return "", "", fmt.Errorf("%s: %w", op, err)
+	}
+	defer stmt.Close()
+
+	var cardNumberHash string
+	var phoneNumberHash string
+	err = stmt.QueryRowContext(ctx, email).Scan(&cardNumberHash, &phoneNumberHash)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", "", fmt.Errorf("%s: %w", op, storage.ErrCardNotFound)
+		}
+		return "", "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	return cardNumberHash, phoneNumberHash, nil
+}
+
 func (s *Storage) Pay(ctx context.Context, email string, amount int64) (int64, bool, error) {
 	const op = "storage.sqlite.Pay"
 

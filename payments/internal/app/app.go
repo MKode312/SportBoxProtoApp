@@ -17,7 +17,7 @@ func New(log *slog.Logger, gRPCAddr string, storagePath string) *App {
 		panic(err)
 	}
 
-	paymentService := payment.New(log, storage, storage, storage)
+	paymentService := payment.New(log, storage, storage, storage, storage)
 
 	grpcApp := grpcApp.New(log, paymentService, gRPCAddr)
 

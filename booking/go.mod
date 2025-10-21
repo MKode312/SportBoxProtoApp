@@ -6,7 +6,7 @@ require github.com/ilyakaznacheev/cleanenv v1.5.0
 
 require github.com/mattn/go-sqlite3 v1.14.32
 
-require github.com/MKode312/protos v0.0.10
+require github.com/MKode312/protos v0.0.13
 
 require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect

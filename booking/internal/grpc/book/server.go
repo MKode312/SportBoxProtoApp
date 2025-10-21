@@ -28,6 +28,7 @@ const (
 
 type Book interface {
 	Book(ctx context.Context, email string, boxName string, timeStart string, timeHrs int64, timeMins int64) (reserveID int64, success bool, err error)
+	CancelBooking(ctx context.Context, email string, bookingID int64) (refundedAmount int64, success bool, err error)
 }
 
 type serverAPI struct {
@@ -49,6 +50,39 @@ func Register(gRPC *grpc.Server, book Book, paymclient payments.Client) {
 		paymentsClient: paymclient,
 	}
 	bookingv1.RegisterBookServer(gRPC, wrapped)
+}
+
+func (b *bookingServerAdapter) CancelBooking(ctx context.Context, req *bookingv1.CancelBookingRequest) (*bookingv1.CancelBookingResponse, error) {
+	if req.GetBookingId() <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "booking ID is required")
+	}
+
+	if req.GetEmail() == "" {
+		return nil, status.Error(codes.InvalidArgument, "email is required")
+	}
+
+	refundedAmount, success, err := b.originalServer.book.CancelBooking(ctx, req.GetEmail(), req.GetBookingId())
+	if err != nil {
+		if errors.Is(err, ErrBookingNotFound) {
+			return nil, status.Error(codes.NotFound, "booking not found")
+		}
+		if err.Error() == ErrNotYourBooking.Error() {
+			return nil, status.Error(codes.PermissionDenied, "this booking belongs to another user")
+		}
+		return nil, status.Error(codes.Internal, "failed to cancel booking")
+	}
+
+	// Process refund
+	balance, success, err := b.paymentsClient.AddFunds(ctx, req.GetEmail(), refundedAmount)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to process refund")
+	}
+
+	return &bookingv1.CancelBookingResponse{
+		Success:        success,
+		RefundedAmount: refundedAmount,
+		Balance:        balance,
+	}, nil
 }
 
 func (b *bookingServerAdapter) Book(ctx context.Context, req *bookingv1.BookRequest) (*bookingv1.BookResponse, error) {

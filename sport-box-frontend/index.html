@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sport Box Booking</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Sport Box</a>
+            <div class="d-flex" id="navbarNav">
+                <div class="nav-item" id="authButtons">
+                    <button class="btn btn-outline-light me-2" onclick="showLoginForm()">Login</button>
+                    <button class="btn btn-light" onclick="showRegisterForm()">Register</button>
+                </div>
+                <div class="nav-item d-none" id="userInfo">
+                    <span class="text-light me-2" id="userEmail"></span>
+                    <span class="text-light me-3" id="userBalance">Balance: $0</span>
+                    <button class="btn btn-outline-light" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Auth Forms -->
+        <div id="authForms">
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <!-- Login Form -->
+                    <div class="card mb-4" id="loginForm">
+                        <div class="card-header">Login</div>
+                        <div class="card-body">
+                            <form onsubmit="login(event)">
+                                <div class="mb-3">
+                                    <label for="loginEmail" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="loginEmail" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="loginPassword" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="loginPassword" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Login</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Register Form -->
+                    <div class="card mb-4 d-none" id="registerForm">
+                        <div class="card-header">Register</div>
+                        <div class="card-body">
+                            <form onsubmit="register(event)">
+                                <div class="mb-3">
+                                    <label for="registerEmail" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="registerEmail" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="registerPassword" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="registerPassword" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Register</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" class="d-none">
+            <!-- Payment Section -->
+            <div class="row mb-4" id="paymentSection">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>Payment Methods</span>
+                            <button class="btn btn-primary" onclick="openPaymentModal()">Add Card</button>
+                        </div>
+                        <div class="card-body">
+                            <div id="cardsList" class="row"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Box Booking Section -->
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            Available Boxes
+                        </div>
+                        <div class="card-body">
+                            <div id="boxesContainer" class="row"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Booking Details -->
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            Your Bookings
+                        </div>
+                        <div class="card-body">
+                            <div id="bookingsList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Modal -->
+    <div class="modal fade" id="bookingModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Book a Box</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="bookingForm" onsubmit="createBooking(event)">
+                        <div class="mb-3">
+                            <label for="boxName" class="form-label">Box Name</label>
+                            <input type="text" class="form-control" id="boxName" required readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="peopleAmount" class="form-label">Number of People</label>
+                            <input type="number" class="form-control" id="peopleAmount" min="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="timeStart" class="form-label">Start Time</label>
+                            <select class="form-control" id="timeStart" required>
+                                <option value="">Select time...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="timeHrs" class="form-label">Duration</label>
+                            <div class="row">
+                                <div class="col">
+                                    <input type="number" class="form-control" id="timeHrs" placeholder="Hours" min="0" max="23" required>
+                                </div>
+                                <div class="col">
+                                    <input type="number" class="form-control" id="timeMins" placeholder="Minutes" min="0" max="59" step="30" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Book Now</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="modal fade" id="paymentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Payment Card</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="paymentForm" onsubmit="addCard(event)">
+                        <div class="mb-3">
+                            <label for="cardNumber" class="form-label">Card Number</label>
+                            <input type="text" class="form-control" id="cardNumber" required 
+                                   pattern="\d{16}" title="Please enter a valid 16-digit card number">
+                        </div>
+                        <div class="mb-3">
+                            <label for="cvc" class="form-label">CVC</label>
+                            <input type="text" class="form-control" id="cvc" required 
+                                   pattern="\d{3}" title="Please enter a valid 3-digit CVC">
+                        </div>
+                        <div class="mb-3">
+                            <label for="phoneNumber" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phoneNumber" required 
+                                   pattern="\d{10}" title="Please enter a valid 10-digit phone number">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Add Card</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

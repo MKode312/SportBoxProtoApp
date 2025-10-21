@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	bookgrpc "sport-box-api/internal/clients/booking/grpc"
 	paymgrpc "sport-box-api/internal/clients/payments/grpc"
 	ssogrpc "sport-box-api/internal/clients/sso/grpc"
@@ -14,6 +15,7 @@ import (
 	"sport-box-api/internal/http-server/handlers/book"
 	"sport-box-api/internal/http-server/handlers/paym/addcard"
 	"sport-box-api/internal/http-server/handlers/paym/addfunds"
+	"sport-box-api/internal/http-server/handlers/paym/getcard"
 	authMW "sport-box-api/internal/http-server/middleware/auth"
 	mwLogger "sport-box-api/internal/http-server/middleware/logger"
 	"sport-box-api/internal/lib/logger/handlers/slogpretty"
@@ -21,6 +23,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 )
 
 const (
@@ -79,19 +82,42 @@ func main() {
 
 	router := chi.NewRouter()
 
+	// Configure CORS
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:8080", "http://localhost:8082", "http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "Accept", "X-Requested-With"},
+		ExposedHeaders:   []string{"Set-Cookie"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+
 	router.Use(middleware.RequestID)
 	router.Use(mwLogger.New(log))
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	router.Post("/register", register.New(context.Background(), log, *ssoClient))
-	router.Post("/login", login.New(context.Background(), log, *ssoClient))
+	// Serve static frontend files
+	frontendPath := http.Dir("/app/sport-box-frontend")
+	FileServer(router, "/", frontendPath)
 
-	router.Group(func(r chi.Router) {
-		r.Use(authMW.AuthorizeJWTToken)
-		r.Post("/addcard", addcard.New(context.Background(), log, *paymentsClient))
-		r.Post("/addfunds", addfunds.New(context.Background(), log, *paymentsClient))
-		r.Post("/book", book.New(context.Background(), log, *bookingClient))
+	// API routes
+	router.Route("/api", func(r chi.Router) {
+		// Public routes
+		r.Post("/auth/register", register.New(context.Background(), log, *ssoClient))
+		r.Post("/auth/login", login.New(context.Background(), log, *ssoClient))
+
+		// Protected routes
+		r.Group(func(r chi.Router) {
+			r.Use(authMW.AuthorizeJWTToken)
+			r.Post("/payments/add-card", addcard.New(context.Background(), log, *paymentsClient))
+			r.Post("/payments/add-funds", addfunds.New(context.Background(), log, *paymentsClient))
+			r.Get("/payments/cards", getcard.New(context.Background(), log, *paymentsClient))
+			r.Post("/book", book.New(context.Background(), log, *bookingClient))
+			r.Get("/boxes", book.GetBoxes(context.Background(), log, *bookingClient))
+			r.Get("/bookings", book.GetBookings(context.Background(), log, *bookingClient))
+			r.Delete("/bookings/{id}", book.Cancel(bookingClient))
+		})
 	})
 
 	srv := &http.Server{
@@ -138,4 +164,22 @@ func setupPretySlog() *slog.Logger {
 	handler := opts.NewPrettyHandler(os.Stdout)
 
 	return slog.New(handler)
+}
+
+func FileServer(r chi.Router, path string, root http.FileSystem) {
+	if strings.ContainsAny(path, "{}*") {
+		panic("FileServer does not permit URL parameters.")
+	}
+
+	fs := http.StripPrefix(path, http.FileServer(root))
+
+	if path != "/" && path[len(path)-1] != '/' {
+		r.Get(path, http.RedirectHandler(path+"/", http.StatusMovedPermanently).ServeHTTP)
+		path += "/"
+	}
+	path += "*"
+
+	r.Get(path, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fs.ServeHTTP(w, r)
+	}))
 }

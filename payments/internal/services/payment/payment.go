@@ -11,11 +11,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type CardGetter interface {
+	GetCard(ctx context.Context, email string) (cardNumber string, phoneNumber string, err error)
+}
+
 type Payment struct {
 	log             *slog.Logger
 	cardAdder       CardAdder
 	fundsAdder      FundsAdder
 	paymentProvider PaymentProvider
+	cardGetter      CardGetter
 }
 
 type CardAdder interface {
@@ -40,13 +45,39 @@ var (
 	ErrNotFound            = errors.New("card not found")
 )
 
-func New(log *slog.Logger, cardAdder CardAdder, fundsAdder FundsAdder, paymentProvider PaymentProvider) *Payment {
+func New(log *slog.Logger, cardAdder CardAdder, fundsAdder FundsAdder, paymentProvider PaymentProvider, cardGetter CardGetter) *Payment {
 	return &Payment{
 		log:             log,
 		cardAdder:       cardAdder,
 		fundsAdder:      fundsAdder,
 		paymentProvider: paymentProvider,
+		cardGetter:      cardGetter,
 	}
+}
+
+func (p *Payment) GetCard(ctx context.Context, email string) (string, string, error) {
+	const op = "payment.GetCard"
+
+	log := p.log.With(
+		slog.String("op", op),
+	)
+
+	log.Info("retrieving card information")
+
+	cardNumber, phoneNumber, err := p.cardGetter.GetCard(ctx, email)
+	if err != nil {
+		if errors.Is(err, storage.ErrCardNotFound) {
+			log.Error("card not found", sl.Err(err))
+			return "", "", fmt.Errorf("%s: %w", op, ErrNotFound)
+		}
+
+		log.Error("failed to get card information", sl.Err(err))
+		return "", "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("card information retrieved successfully")
+
+	return cardNumber, phoneNumber, nil
 }
 
 func (p *Payment) AddCard(ctx context.Context, email string, cardNumber string, cvc string, phoneNumber string) (bool, error) {

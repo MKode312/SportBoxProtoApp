@@ -1,26 +1,32 @@
-FROM golang:1.25.3-alpine AS builder
+FROM golang:1.25.1-alpine AS builder
+
+WORKDIR /app
+
+# Copy frontend files first
+COPY ./sport-box-frontend ./sport-box-frontend
 
 WORKDIR /app/sport-box-api
 
-# Копируем только go.mod и go.sum для кэширования зависимостей
+# Copy only go.mod and go.sum for dependency caching
 COPY ./sport-box-api/go.mod ./sport-box-api/go.sum ./
 
 RUN go mod download
 
-# Копируем весь код проекта
+# Copy the project code
 COPY ./sport-box-api ./
+COPY ./sport-box-frontend /app/sport-box-frontend
 
-# Собираем binary из соответствующей папки, команда запускается в /app/sport-box-api
+# Build the binary
 RUN go build -o /app/api ./cmd/sport-box/main.go
 
-
-FROM alpine:3.22.2
+FROM alpine:3.18
 
 WORKDIR /app
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=builder /app/api .
+COPY --from=builder /app/sport-box-frontend ./sport-box-frontend
 
 RUN chown -R appuser:appgroup /app
 

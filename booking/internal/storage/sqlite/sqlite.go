@@ -153,3 +153,67 @@ func (s *Storage) IsNotBooked(ctx context.Context, boxName string, startTime int
 
 	return true, nil
 }
+
+func (s *Storage) CancelBooking(ctx context.Context, email string, bookingID int64) (refundedAmount int64, success bool, err error) {
+	const op = "storage.sqlite.CancelBooking"
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, false, fmt.Errorf("%s: %w", op, err)
+	}
+	defer tx.Rollback()
+
+	// First, verify the booking exists and belongs to the user
+	row := tx.QueryRowContext(ctx, `
+		SELECT email, boxName, startsAt, expiresAt FROM bookings WHERE bookingId = ?
+	`, bookingID/1000) // Convert from external ID to internal ID
+	
+	var (
+		bookingEmail string
+		boxName      string
+		startsAt     int64
+		expiresAt    int64
+	)
+
+	if err := row.Scan(&bookingEmail, &boxName, &startsAt, &expiresAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, false, fmt.Errorf("%s: %w", op, storage.ErrBookingNotFound)
+		}
+		return 0, false, fmt.Errorf("%s: %w", op, err)
+	}
+
+	if bookingEmail != email {
+		return 0, false, fmt.Errorf("%s: %w", op, storage.ErrNotYourBooking)
+	}
+
+	// Calculate refund amount based on remaining time
+	now := time.Now().Unix()
+	if now >= expiresAt {
+		return 0, false, fmt.Errorf("%s: booking has already expired", op)
+	}
+
+	remainingTime := expiresAt - now
+	totalTime := expiresAt - startsAt
+	refundedAmount = (remainingTime * 100) / totalTime // Calculate percentage of time remaining
+
+	// Delete the booking
+	result, err := tx.ExecContext(ctx, "DELETE FROM bookings WHERE bookingId = ?", bookingID/1000)
+	if err != nil {
+		return 0, false, fmt.Errorf("%s: %w", op, err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, false, fmt.Errorf("%s: %w", op, err)
+	}
+
+	if rowsAffected == 0 {
+		return 0, false, fmt.Errorf("%s: %w", op, storage.ErrBookingNotFound)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, false, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return refundedAmount, true, nil
+}

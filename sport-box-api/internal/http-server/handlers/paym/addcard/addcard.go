@@ -8,7 +8,6 @@ import (
 	"sport-box-api/internal/lib/api/response"
 	paymerrors "sport-box-api/internal/lib/errors/payments"
 	"sport-box-api/internal/lib/logger/sl"
-	"strconv"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
@@ -17,9 +16,9 @@ import (
 
 type Request struct {
 	Email       string `json:"email" validate:"required"`
-	PhoneNumber int    `json:"phoneNumber" validate:"required"`
-	CardNumber  int    `json:"cardNumber" validate:"required"`
-	Cvc         int    `json:"cvc" validate:"required"`
+	PhoneNumber int64  `json:"phoneNumber" validate:"required"`
+	CardNumber  int64  `json:"cardNumber" validate:"required"`
+	Cvc         int64  `json:"cvc" validate:"required"`
 }
 
 type Response struct {
@@ -61,7 +60,7 @@ func New(ctx context.Context, log *slog.Logger, paymentsclient paymgrpc.Client) 
 			return
 		}
 
-		success, err := paymentsclient.AddCard(ctx, req.Email, strconv.Itoa(req.CardNumber), strconv.Itoa(req.Cvc), strconv.Itoa(req.PhoneNumber))
+		success, err := paymentsclient.AddCard(ctx, req.Email, req.CardNumber, req.Cvc, req.PhoneNumber)
 		if err != nil {
 			if err.Error() == paymerrors.ErrInvalidCredentials.Error() {
 				log.Error("invalid credentials")
@@ -81,7 +80,7 @@ func New(ctx context.Context, log *slog.Logger, paymentsclient paymgrpc.Client) 
 		log.Info("successfully added card")
 
 		render.JSON(w, r, Response{
-			Success: success,
+			Success:  success,
 			Response: response.OK(),
 		})
 	}

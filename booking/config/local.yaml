@@ -6,6 +6,6 @@ grpc:
   timeout: 5s
 clients: 
   payments:
-   address: "sport-box-payments:55055"
+   address: "sport-box-payments:5055"
    timeout: 5s
    retriesCount: 3
