@@ -7,9 +7,9 @@ require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 )
 
-require github.com/MKode312/protos v0.0.12
-
 require github.com/golang-jwt/jwt/v5 v5.3.0
+
+require github.com/MKode312/protos v0.0.14
 
 require (
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2

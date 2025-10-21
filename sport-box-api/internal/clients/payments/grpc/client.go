@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"sport-box-api/internal/lib/logger/sl"
-	"strconv"
 	"time"
 
 	paymentsv1 "github.com/MKode312/protos/gen/go/payments"
@@ -113,7 +112,7 @@ func (c *Client) AddFunds(ctx context.Context, email string, amount int64) (int6
 	return resp.Balance, resp.Success, nil
 }
 
-func (c *Client) GetCard(ctx context.Context, email string) (int64, int64, error) {
+func (c *Client) GetCard(ctx context.Context, email string) (string, string, error) {
 	const op = "clients.payments.grpc.GetCard"
 
 	resp, err := c.client.GetCard(ctx, &paymentsv1.GetCardRequest{
@@ -121,23 +120,12 @@ func (c *Client) GetCard(ctx context.Context, email string) (int64, int64, error
 	})
 	if err != nil {
 		st, ok := status.FromError(err)
-		if ok {
-			if st.Code() == codes.NotFound {
-				return 0, 0, fmt.Errorf("%s: card not found", op)
-			}
+		if ok && st.Code() == codes.NotFound {
+			return "", "", fmt.Errorf("%s: card not found", op)
 		}
-		return 0, 0, fmt.Errorf("%s: %w", op, err)
+		return "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	cardNumber, err := strconv.ParseInt(resp.CardNumber, 10, 64)
-	if err != nil {
-		return 0, 0, fmt.Errorf("%s: failed to parse card number: %w", op, err)
-	}
-
-	phoneNumber, err := strconv.ParseInt(resp.PhoneNumber, 10, 64)
-	if err != nil {
-		return 0, 0, fmt.Errorf("%s: failed to parse phone number: %w", op, err)
-	}
-
-	return cardNumber, phoneNumber, nil
+	// Возвращаете номера как строки
+	return resp.CardNumber, resp.PhoneNumber, nil
 }

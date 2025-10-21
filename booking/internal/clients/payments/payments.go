@@ -81,6 +81,29 @@ func (c *Client) Pay(ctx context.Context, email string, amount int64) (balance i
 	return resp.Balance, resp.Success, nil
 }
 
+func (c *Client) AddFunds(ctx context.Context, email string, amount int64) (balance int64, success bool, err error) {
+	const op = "paymgrpc.AddFunds"
+
+	resp, err := c.api.AddFunds(ctx, &paymentsv1.AddFundsRequest{
+		Email:  email,
+		Amount: amount,
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if ok {
+			if st.Code() == codes.NotFound {
+				return emptyBalanceValue, false, fmt.Errorf("%s", st.Message())
+			}
+			if st.Code() == codes.InvalidArgument {
+				return emptyBalanceValue, false, fmt.Errorf("%s", st.Message())
+			}
+		}
+		return emptyBalanceValue, false, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return resp.Balance, resp.Success, nil
+}
+
 func InterceptorLogger(l *slog.Logger) grpclog.Logger {
 	return grpclog.LoggerFunc(func(ctx context.Context, lvl grpclog.Level, msg string, fields ...any) {
 		l.Log(ctx, slog.Level(lvl), msg, fields...)

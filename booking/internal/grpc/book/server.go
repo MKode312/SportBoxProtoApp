@@ -20,6 +20,7 @@ var (
 	ErrCardNotFound        = errors.New("card not found")
 	ErrAlreadyBooked       = errors.New("this box is already booked")
 	ErrBookingNotFound     = errors.New("booking not found")
+	ErrNotYourBooking      = errors.New("this booking belongs to another user")
 )
 
 const (
@@ -61,7 +62,7 @@ func (b *bookingServerAdapter) CancelBooking(ctx context.Context, req *bookingv1
 		return nil, status.Error(codes.InvalidArgument, "email is required")
 	}
 
-	refundedAmount, success, err := b.originalServer.book.CancelBooking(ctx, req.GetEmail(), req.GetBookingId())
+	refundedAmount, _, err := b.originalServer.book.CancelBooking(ctx, req.GetEmail(), req.GetBookingId())
 	if err != nil {
 		if errors.Is(err, ErrBookingNotFound) {
 			return nil, status.Error(codes.NotFound, "booking not found")
@@ -179,7 +180,7 @@ func validate(req *bookingv1.BookRequest) error {
 		return status.Error(codes.InvalidArgument, "the amount of people is greater than 4")
 	}
 
-	timeStart, err := time.Parse(time.UnixDate, req.GetTimeStart())
+	timeStart, err := time.Parse("15:04", req.GetTimeStart())
 	if err != nil {
 		fmt.Println(err)
 		return status.Error(codes.Internal, "internal error occured")

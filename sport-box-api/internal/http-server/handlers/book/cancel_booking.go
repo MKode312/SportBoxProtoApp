@@ -35,7 +35,6 @@ type CancelResponse struct {
 // @Router /bookings/{id} [delete]
 func Cancel(booker *bookgrpc.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.book.Cancel"
 
 		bookingIDStr := chi.URLParam(r, "id")
 		bookingID, err := strconv.ParseInt(bookingIDStr, 10, 64)

@@ -23,18 +23,18 @@ func GetBoxes(ctx context.Context, log *slog.Logger, client bookgrpc.Client) htt
 		// Temporary mock data until backend service is ready
 		boxes := []Box{
 			{
-				Name:         "Box 1",
-				PricePerHour: 50.0,
+				Name:         "LeninaBox",
+				PricePerHour: 600.0,
 				Available:    true,
 			},
 			{
-				Name:         "Box 2",
-				PricePerHour: 60.0,
+				Name:         "SibirskayaBox",
+				PricePerHour: 600.0,
 				Available:    true,
 			},
 			{
-				Name:         "Box 3",
-				PricePerHour: 45.0,
+				Name:         "LunacharskogoBox",
+				PricePerHour: 600.0,
 				Available:    false,
 			},
 		}

@@ -52,6 +52,21 @@ func New(ctx context.Context, log *slog.Logger, addr string, timeout time.Durati
 	}, nil
 }
 
+type Box struct {
+	Name         string
+	PricePerHour float64
+	Available    bool
+}
+
+type Booking struct {
+	Id           int64
+	BoxName      string
+	TimeStart    string
+	TimeHrs      int64
+	TimeMins     int64
+	PeopleAmount int64
+}
+
 func (c *Client) Book(ctx context.Context, email string, boxName string, peopleAmount int64, timeStart string, timeHrs int64, timeMins int64) (balance int64, resID int64, success bool, err error) {
 	const op = "bookgrpc.Book"
 
@@ -91,7 +106,7 @@ func (c *Client) Book(ctx context.Context, email string, boxName string, peopleA
 func (c *Client) CancelBooking(ctx context.Context, email string, bookingID int64) (refundedAmount int64, balance int64, success bool, err error) {
 	const op = "bookgrpc.CancelBooking"
 
-	resp, err := c.api.(ctx, &bookingv1.CancelBookingRequest{
+	resp, err := c.api.CancelBooking(ctx, &bookingv1.CancelBookingRequest{
 		Email:     email,
 		BookingId: bookingID,
 	})
@@ -113,6 +128,46 @@ func (c *Client) CancelBooking(ctx context.Context, email string, bookingID int6
 
 	return resp.RefundedAmount, resp.Balance, resp.Success, nil
 }
+
+func (c *Client) GetBoxes(ctx context.Context) ([]*bookingv1.Box, error) {
+	const op = "bookgrpc.GetBoxes"
+
+	resp, err := c.api.GetBoxes(ctx, &bookingv1.GetBoxesRequest{})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if ok {
+			if st.Code() == codes.Internal {
+				return nil, fmt.Errorf("%s", st.Message())
+			}
+		}
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return resp.Boxes, nil
+}
+
+func (c *Client) GetBookings(ctx context.Context, email string) ([]*bookingv1.Booking, error) {
+	const op = "bookgrpc.GetBookings"
+
+	resp, err := c.api.GetBookings(ctx, &bookingv1.GetBookingsRequest{
+		Email: email,
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if ok {
+			if st.Code() == codes.NotFound {
+				return nil, fmt.Errorf("%s", st.Message())
+			}
+			if st.Code() == codes.Internal {
+				return nil, fmt.Errorf("%s", st.Message())
+			}
+		}
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return resp.Bookings, nil
+}
+
 
 func InterceptorLogger(l *slog.Logger) grpclog.Logger {
 	return grpclog.LoggerFunc(func(ctx context.Context, lvl grpclog.Level, msg string, fields ...any) {

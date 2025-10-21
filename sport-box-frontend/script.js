@@ -215,41 +215,99 @@ function showSuccess(formType, message) {
 // Payment Functions
 async function addCard(event) {
     event.preventDefault();
+    
+    // Get values from form
     const email = document.getElementById('userEmail').textContent;
-    const cardNumber = parseInt(document.getElementById('cardNumber').value);
-    const cvc = parseInt(document.getElementById('cvc').value);
-    const phoneNumber = parseInt(document.getElementById('phoneNumber').value);
+    const cardNumberInput = document.getElementById('cardNumber').value.replace(/\D/g, ''); // Remove non-digits
+    const cvcInput = document.getElementById('cvc').value.replace(/\D/g, ''); // Remove non-digits
+    const phoneNumberInput = document.getElementById('phoneNumber').value.replace(/\D/g, ''); // Remove non-digits
+
+    // Validate inputs
+    if (cardNumberInput.length !== 16) {
+        showError('payment', 'Card number must be 16 digits');
+        return;
+    }
+    if (cvcInput.length !== 3) {
+        showError('payment', 'CVC must be 3 digits');
+        return;
+    }
+    if (phoneNumberInput.length !== 10) {
+        showError('payment', 'Phone number must be 10 digits');
+        return;
+    }
+
+    // Convert to numbers
+    const cardNumber = Number(cardNumberInput);
+    const cvc = Number(cvcInput);
+    const phoneNumber = Number(phoneNumberInput);
 
     try {
         const response = await apiRequest('/payments/add-card', {
             method: 'POST',
             body: JSON.stringify({
                 email,
-                cardNumber,
-                cvc,
-                phoneNumber
+                cardNumber: cardNumber,
+                cvc: cvc,
+                phoneNumber: phoneNumber
             })
         });
 
-        if (response.success) {
-            showSuccess('payment', 'Card added successfully!');
-            await loadPaymentMethods(); // Refresh payment methods display
-            paymentModal.hide();
+        if (response.error) {
+            throw new Error(response.error);
         }
+
+        showSuccess('main', 'Card added successfully!');
+        document.getElementById('paymentForm').reset();
+        await loadPaymentMethods(); // Refresh payment methods display
+        paymentModal.hide();
     } catch (error) {
-        showError('payment', error.message);
+        console.error('Add card error:', error);
+        showError('main', 'Failed to add card: ' + error.message);
     }
 }
 
 // Booking Functions
 async function createBooking(event) {
     event.preventDefault();
+    
+    // Validate that user has added a payment method first
+    try {
+        const cardResponse = await apiRequest('/payments/cards?email=' + encodeURIComponent(document.getElementById('userEmail').textContent), {
+            method: 'GET'
+        });
+        
+        if (!cardResponse || (Array.isArray(cardResponse) && cardResponse.length === 0)) {
+            showError('booking', 'Please add a payment method before booking');
+            return;
+        }
+    } catch (error) {
+        showError('booking', 'Please add a payment method before booking');
+        return;
+    }
+
+    // Validate form inputs
     const email = document.getElementById('userEmail').textContent;
     const boxName = document.getElementById('boxName').value;
     const peopleAmount = parseInt(document.getElementById('peopleAmount').value);
     const timeStart = document.getElementById('timeStart').value;
     const timeHrs = parseInt(document.getElementById('timeHrs').value);
     const timeMins = parseInt(document.getElementById('timeMins').value);
+
+    // Input validation
+    if (!timeStart) {
+        showError('booking', 'Please select a start time');
+        return;
+    }
+
+    if (isNaN(peopleAmount) || peopleAmount < 1) {
+        showError('booking', 'Please enter a valid number of people');
+        return;
+    }
+
+    if (isNaN(timeHrs) || timeHrs < 0 || (timeHrs === 0 && timeMins === 0)) {
+        showError('booking', 'Please enter a valid duration');
+        return;
+    }
 
     try {
         const response = await apiRequest('/book', {
@@ -264,15 +322,31 @@ async function createBooking(event) {
             })
         });
 
-        if (response.success) {
-            showSuccess('booking', `Booking successful! Reservation ID: ${response.resID}`);
-            updateBalance(response.balance);
-            bookingModal.hide();
-            loadBoxes();
-            loadBookings();
+        if (response.error) {
+            throw new Error(response.error);
         }
+
+        // Show success message and update UI
+        showSuccess('main', `Booking successful! Reservation ID: ${response.resID || 'N/A'}`);
+        if (response.balance !== undefined) {
+            updateBalance(response.balance);
+        }
+        bookingModal.hide();
+        
+        // Refresh the boxes and bookings lists
+        await Promise.all([
+            loadBoxes(),
+            loadBookings()
+        ]);
+        
+        // Clear form
+        document.getElementById('bookingForm').reset();
+        
     } catch (error) {
-        showError('booking', error.message);
+        console.error('Booking error:', error);
+        const errorMessage = error.message || 'Failed to create booking. Please try again.';
+        showError('main', `Booking Error: ${errorMessage}`);
+        // Keep the modal open so user can see the error
     }
 }
 
@@ -288,25 +362,74 @@ async function loadPaymentMethods() {
         const cardsList = document.getElementById('cardsList');
         if (!cardsList) return;
 
-        if (response.cardNumber && response.phoneNumber) {
-            // Mask card number to show only last 4 digits
-            const maskedCard = '**** **** **** ' + response.cardNumber.toString().slice(-4);
-            // Mask phone number to show only last 4 digits
-            const maskedPhone = '*******' + response.phoneNumber.toString().slice(-4);
-            
-            cardsList.innerHTML = `
-                <div class="col-md-6">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Card Details</h5>
-                            <p class="card-text">
-                                <strong>Card Number:</strong> ${maskedCard}<br>
-                                <strong>Phone Number:</strong> ${maskedPhone}
-                            </p>
+        console.log('Cards response:', response); // Debug log
+
+        // Handle different response formats
+        let cards = [];
+        if (response) {
+            if (Array.isArray(response)) {
+                cards = response;
+            } else if (typeof response === 'object') {
+                // If it's a single card object
+                cards = [response];
+            }
+        }
+
+        if (cards && cards.length > 0) {
+            cardsList.innerHTML = cards.map(card => {
+                try {
+                    // Handle both string and number formats
+                    const cardNumber = typeof card.cardNumber === 'int' ? 
+                        card.cardNumber.replace(/[^\d]/g, '') : // Remove non-digits if string
+                        (card.cardNumber ? card.cardNumber.toString() : '');
+                    
+                    const phoneNumber = typeof card.phoneNumber === 'int' ?
+                        card.phoneNumber.replace(/[^\d]/g, '') : // Remove non-digits if string
+                        (card.phoneNumber ? card.phoneNumber.toString() : '');
+
+                    // Only show the card if we have valid numbers
+                    if (!cardNumber) {
+                        console.warn('Invalid card number received:', card.cardNumber);
+                        return '';
+                    }
+
+                    // Format the display
+                    const maskedCard = cardNumber.length >= 4 ? 
+                        '**** **** **** ' + cardNumber.slice(-4) : 
+                        '**** **** **** ****';
+                    
+                    const maskedPhone = phoneNumber.length >= 4 ?
+                        '*******' + phoneNumber.slice(-4) :
+                        '***********';
+
+                    return `
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">Payment Card</h5>
+                                    <p class="card-text">
+                                        <strong>Card Number:</strong> ${maskedCard}<br>
+                                        <strong>Phone Number:</strong> ${maskedPhone}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } catch (err) {
+                    console.error('Error processing card:', err);
+                    return '';
+                }
+            }).filter(html => html !== '').join('');
+
+            if (cardsList.innerHTML === '') {
+                cardsList.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-warning">
+                            No valid cards found. Please add a new card.
                         </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
         } else {
             cardsList.innerHTML = `
                 <div class="col-12">
@@ -317,20 +440,16 @@ async function loadPaymentMethods() {
             `;
         }
     } catch (error) {
+        console.error('Error loading payment methods:', error);
         const cardsList = document.getElementById('cardsList');
         if (cardsList) {
             cardsList.innerHTML = `
                 <div class="col-12">
-                    <div class="alert alert-info">
-                        No payment methods found. Add a card to make bookings.
+                    <div class="alert alert-danger">
+                        <strong>Error loading cards:</strong> ${error.message}
                     </div>
                 </div>
             `;
-        }
-        // Don't show error for no cards, it's a normal state
-        if (error.message !== 'Card not found') {
-            console.error('Error loading payment methods:', error);
-            showError('payment', 'Failed to load payment methods: ' + error.message);
         }
     }
 }
@@ -389,8 +508,9 @@ function createBoxCard(box) {
     card.innerHTML = `
         <div class="card box-card" onclick="openBookingModal('${box.name}')">
             <div class="card-body">
+            <div class="box-price">₽${box.pricePerHour}/hour</div>
+                <img src="assets/sportBoxImage.jpg" alt="${box.name}" class="box-image">
                 <h5 class="card-title">${box.name}</h5>
-                <div class="box-price">$${box.pricePerHour}/hour</div>
                 <div class="box-status ${box.available ? 'status-available' : 'status-booked'}">
                     ${box.available ? 'Available' : 'Booked'}
                 </div>

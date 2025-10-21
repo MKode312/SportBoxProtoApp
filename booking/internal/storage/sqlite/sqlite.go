@@ -31,7 +31,7 @@ func (s *Storage) BookABox(ctx context.Context, email string, boxName string, st
 
 	dur := time.Duration(timeHrs)*time.Hour + time.Duration(timeMins)*time.Minute
 
-	startsAt, err := time.Parse(time.UnixDate, startTime)
+	startsAt, err := time.Parse("15:04", startTime)
 	if err != nil {
 		return 0, false, fmt.Errorf("%s: %w", op, err)
 	}
@@ -163,10 +163,9 @@ func (s *Storage) CancelBooking(ctx context.Context, email string, bookingID int
 	}
 	defer tx.Rollback()
 
-	// First, verify the booking exists and belongs to the user
 	row := tx.QueryRowContext(ctx, `
 		SELECT email, boxName, startsAt, expiresAt FROM bookings WHERE bookingId = ?
-	`, bookingID/1000) // Convert from external ID to internal ID
+	`, bookingID/1000)
 	
 	var (
 		bookingEmail string
@@ -186,7 +185,6 @@ func (s *Storage) CancelBooking(ctx context.Context, email string, bookingID int
 		return 0, false, fmt.Errorf("%s: %w", op, storage.ErrNotYourBooking)
 	}
 
-	// Calculate refund amount based on remaining time
 	now := time.Now().Unix()
 	if now >= expiresAt {
 		return 0, false, fmt.Errorf("%s: booking has already expired", op)
@@ -194,9 +192,8 @@ func (s *Storage) CancelBooking(ctx context.Context, email string, bookingID int
 
 	remainingTime := expiresAt - now
 	totalTime := expiresAt - startsAt
-	refundedAmount = (remainingTime * 100) / totalTime // Calculate percentage of time remaining
+	refundedAmount = (remainingTime * 100) / totalTime 
 
-	// Delete the booking
 	result, err := tx.ExecContext(ctx, "DELETE FROM bookings WHERE bookingId = ?", bookingID/1000)
 	if err != nil {
 		return 0, false, fmt.Errorf("%s: %w", op, err)

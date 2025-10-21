@@ -1,83 +1,258 @@
-/* Styles for Sport Box Frontend */
-.navbar {
+/* Modern Sport Box Frontend Styles */
+:root {
+    --primary-color: #4361ee;
+    --secondary-color: #3f37c9;
+    --accent-color: #4895ef;
+    --success-color: #4cc9f0;
+    --danger-color: #f72585;
+    --light-bg: #f8f9fa;
+    --dark-bg: #212529;
+}
+
+body {
+    background: linear-gradient(135deg, #1a2a6c 0%, #b21f1f 50%, #fdbb2d 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: #333;
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(100px);
+    z-index: 0;
+}
+
+/* Hero Section Styles */
+.hero-section {
+    position: relative;
+    width: 100%;
+    height: 400px;
+    overflow: hidden;
     margin-bottom: 2rem;
 }
 
+.hero-image {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.hero-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 0.3s ease;
+}
+
+.hero-section::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(0deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.1) 100%);
+    z-index: 1;
+}
+
+.hero-image:hover img {
+    transform: scale(1.05);
+}
+
+.container {
+    position: relative;
+    z-index: 1;
+}
+
+/* Navbar Styles */
+.navbar {
+    background: rgba(33, 37, 41, 0.95) !important;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.navbar-brand {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    position: relative;
+    padding-bottom: 2px;
+}
+
+.navbar-brand::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--accent-color);
+    transition: width 0.3s ease;
+}
+
+.navbar-brand:hover::after {
+    width: 100%;
+}
+
+/* Card Styles */
+.card {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    background: rgba(67, 97, 238, 0.1);
+    border-bottom: 1px solid rgba(67, 97, 238, 0.2);
+    font-weight: 600;
+    padding: 1rem 1.5rem;
+}
+
+/* Box Card Styles */
 .box-card {
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.box-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
     margin-bottom: 1rem;
+    transition: transform 0.3s ease;
 }
 
-.box-card:hover {
-    transform: translateY(-5px);
+.box-card:hover .box-image {
+    transform: scale(1.05);
 }
 
-.booking-item {
-    border-bottom: 1px solid #eee;
-    padding: 1rem 0;
+.box-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1;
 }
 
-.booking-item:last-child {
-    border-bottom: none;
+.box-card:hover::before {
+    opacity: 0.1;
 }
 
-#authForms {
-    max-width: 500px;
-    margin: 0 auto;
+.box-card:active {
+    transform: scale(0.98);
 }
 
-.error-message {
-    color: #dc3545;
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
-}
-
-.success-message {
-    color: #198754;
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
-}
-
+/* Status Badges */
 .box-status {
     position: absolute;
     top: 1rem;
     right: 1rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
     font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    z-index: 2;
+    transition: all 0.3s ease;
 }
 
 .status-available {
-    background-color: #198754;
+    background: rgba(76, 201, 240, 0.9);
     color: white;
+    box-shadow: 0 4px 12px rgba(76, 201, 240, 0.3);
 }
 
 .status-booked {
-    background-color: #dc3545;
+    background: rgba(247, 37, 133, 0.9);
     color: white;
+    box-shadow: 0 4px 12px rgba(247, 37, 133, 0.3);
 }
 
-.box-price {
-    font-size: 1.25rem;
-    font-weight: bold;
-    color: #0d6efd;
+/* Form Controls */
+.form-control {
+    border-radius: 8px;
+    border: 1px solid rgba(67, 97, 238, 0.2);
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
 }
 
-.booking-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
 }
 
-/* Loading spinner */
+/* Buttons */
+.btn {
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: -100%;
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+    transition: left 0.5s ease;
+}
+
+.btn:hover::after {
+    left: 100%;
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+    border: none;
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(67, 97, 238, 0.4);
+}
+
+/* Loading Spinner */
 .spinner-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(5px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -87,47 +262,114 @@
 .spinner-border {
     width: 3rem;
     height: 3rem;
+    border-width: 0.25rem;
+    animation: spin 1s linear infinite;
+    color: var(--primary-color);
 }
 
-.main-error-container,
-.main-success-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    max-width: 400px;
-    z-index: 1050;
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-.card {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.box-card .card-body {
-    padding: 1.5rem;
-}
-
-.form-control:focus {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-}
-
-.btn-close:focus {
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-}
-
+/* Modal Styles */
 .modal-content {
-    border-radius: 0.5rem;
+    border-radius: 16px;
+    border: none;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
 }
 
 .modal-header {
-    border-top-left-radius: 0.5rem;
-    border-top-right-radius: 0.5rem;
+    border-bottom: 1px solid rgba(67, 97, 238, 0.2);
+    padding: 1.5rem;
 }
 
-.alert {
+.modal-footer {
+    border-top: 1px solid rgba(67, 97, 238, 0.2);
+    padding: 1.5rem;
+}
+
+/* Booking List Styles */
+.booking-item {
+    padding: 1rem;
     margin-bottom: 1rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(67, 97, 238, 0.1);
+    transition: all 0.3s ease;
 }
 
-.alert-dismissible .btn-close {
-    padding: 1.25rem;
+.booking-item:hover {
+    background: rgba(255, 255, 255, 0.8);
+    transform: scale(1.02);
+}
+
+/* Messages */
+.error-message,
+.success-message {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    animation: slideIn 0.3s ease;
+}
+
+.error-message {
+    background: rgba(247, 37, 133, 0.1);
+    color: var(--danger-color);
+    border: 1px solid rgba(247, 37, 133, 0.2);
+}
+
+.success-message {
+    background: rgba(76, 201, 240, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(76, 201, 240, 0.2);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Card List Styles */
+#cardsList .card {
+    transition: all 0.3s ease;
+}
+
+#cardsList .card:hover {
+    background: rgba(255, 255, 255, 1);
+}
+
+/* Price Tag */
+.box-price {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    background: rgba(67, 97, 238, 0.1);
+    margin-top: 1rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
 }

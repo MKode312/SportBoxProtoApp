@@ -96,8 +96,8 @@ func (s *Storage) GetCard(ctx context.Context, email string) (string, string, er
 	}
 	defer stmt.Close()
 
-	var cardNumberHash string
-	var phoneNumberHash string
+	var cardNumberHash []byte
+	var phoneNumberHash []byte
 	err = stmt.QueryRowContext(ctx, email).Scan(&cardNumberHash, &phoneNumberHash)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -106,7 +106,7 @@ func (s *Storage) GetCard(ctx context.Context, email string) (string, string, er
 		return "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	return cardNumberHash, phoneNumberHash, nil
+	return string(cardNumberHash), string(phoneNumberHash), nil
 }
 
 func (s *Storage) Pay(ctx context.Context, email string, amount int64) (int64, bool, error) {

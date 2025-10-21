@@ -27,7 +27,7 @@ func GetBookings(ctx context.Context, log *slog.Logger, client bookgrpc.Client) 
 		bookings := []Booking{
 			{
 				ID:           1,
-				BoxName:      "Box 1",
+				BoxName:      "LeninaBox",
 				TimeStart:    "14:00",
 				TimeHrs:      2,
 				TimeMins:     0,

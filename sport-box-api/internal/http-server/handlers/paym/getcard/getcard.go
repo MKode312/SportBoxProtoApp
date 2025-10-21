@@ -18,8 +18,8 @@ type Request struct {
 }
 
 type Response struct {
-	CardNumber  int64  `json:"cardNumber"`
-	PhoneNumber int64  `json:"phoneNumber"`
+	CardNumber  string `json:"cardNumber"`
+	PhoneNumber string `json:"phoneNumber"`
 	Status      string `json:"status"`
 	response.Response
 }
@@ -62,7 +62,7 @@ func New(ctx context.Context, log *slog.Logger, paymentsclient paymgrpc.Client) 
 			return
 		}
 
-		log.Info("successfully retrieved card", slog.Int64("cardNumber", cardNumber))
+		log.Info("successfully retrieved card", slog.String("cardNumber", cardNumber))
 
 		render.JSON(w, r, Response{
 			CardNumber:  cardNumber,

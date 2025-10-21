@@ -18,7 +18,7 @@
                 </div>
                 <div class="nav-item d-none" id="userInfo">
                     <span class="text-light me-2" id="userEmail"></span>
-                    <span class="text-light me-3" id="userBalance">Balance: $0</span>
+                    <span class="text-light me-3" id="userBalance">Balance: 0₽</span>
                     <button class="btn btn-outline-light" onclick="logout()">Logout</button>
                 </div>
             </div>
@@ -172,17 +172,26 @@
                         <div class="mb-3">
                             <label for="cardNumber" class="form-label">Card Number</label>
                             <input type="text" class="form-control" id="cardNumber" required 
-                                   pattern="\d{16}" title="Please enter a valid 16-digit card number">
+                                   pattern="\d{16}" maxlength="16"
+                                   oninput="this.value = this.value.replace(/[^\d]/g, '')"
+                                   title="Please enter a valid 16-digit card number">
+                            <div class="form-text">Enter 16 digits without spaces or dashes</div>
                         </div>
                         <div class="mb-3">
                             <label for="cvc" class="form-label">CVC</label>
                             <input type="text" class="form-control" id="cvc" required 
-                                   pattern="\d{3}" title="Please enter a valid 3-digit CVC">
+                                   pattern="\d{3}" maxlength="3"
+                                   oninput="this.value = this.value.replace(/[^\d]/g, '')"
+                                   title="Please enter a valid 3-digit CVC">
+                            <div class="form-text">Enter 3 digits</div>
                         </div>
                         <div class="mb-3">
                             <label for="phoneNumber" class="form-label">Phone Number</label>
                             <input type="tel" class="form-control" id="phoneNumber" required 
-                                   pattern="\d{10}" title="Please enter a valid 10-digit phone number">
+                                   pattern="\d{10}" maxlength="10"
+                                   oninput="this.value = this.value.replace(/[^\d]/g, '')"
+                                   title="Please enter a valid 10-digit phone number">
+                            <div class="form-text">Enter 10 digits without spaces or dashes</div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
