@@ -176,8 +176,8 @@ func validate(req *bookingv1.BookRequest) error {
 		return status.Error(codes.InvalidArgument, "invalid amount of people")
 	}
 
-	if req.GetPeopleAmount() > 4 {
-		return status.Error(codes.InvalidArgument, "the amount of people is greater than 4")
+	if req.GetPeopleAmount() > 1 {
+		return status.Error(codes.InvalidArgument, "the amount of people is greater than 1")
 	}
 
 	timeStart, err := time.Parse("15:04", req.GetTimeStart())
